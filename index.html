@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sports Player Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- =====================================================================
+         HEADER
+         Simple, bold sports-dashboard header with a status indicator.
+    ====================================================================== -->
+    <header class="site-header">
+      <div class="header-inner">
+        <div class="logo">
+          <span class="logo-icon"></span>
+          <div>
+            <span class="logo-title">LNMIIT</span>
+            <span class="logo-sub">PLAYER MANAGEMENT</span>
+          </div>
+        </div>
+        <!-- This badge shows whether we successfully reached the API -->
+        <div class="db-status" id="dbStatus">
+          <span class="status-dot"></span>
+          <span class="status-text">Connecting…</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <!-- =================================================================
+           STATS BAR — shows aggregate totals derived from our player array
+      ================================================================== -->
+      <section class="stats-bar" id="statsBar">
+        <div class="stat-card">
+          <span class="stat-value" id="statTotal">0</span>
+          <span class="stat-label">Total Players</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statSports">—</span>
+          <span class="stat-label">Sports</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statAvgAge">—</span>
+          <span class="stat-label">Avg. Age</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statAvgWeight">—</span>
+          <span class="stat-label">Avg. Weight</span>
+        </div>
+      </section>
+
+      <div class="content-grid">
+        <!-- ===============================================================
+             FORM PANEL — used for both ADD and UPDATE operations.
+             The hidden input #editingId tells script.js whether we're
+             creating a new player or updating an existing one.
+        ================================================================ -->
+        <aside class="form-panel">
+          <div class="panel-header">
+            <h2 class="panel-title" id="formTitle">Add Player</h2>
+            <!-- Cancel button only visible during edit mode -->
+            <button class="btn-cancel" id="btnCancelEdit" hidden>✕ Cancel</button>
+          </div>
+
+          <!--
+            We use a plain <form> element so the browser handles
+            built-in validation (required, min, max).
+            The form id is used in script.js with getElementById.
+          -->
+          <form id="playerForm" novalidate>
+            <!-- Hidden field stores the _id of the player being edited -->
+            <input type="hidden" id="editingId" value="" />
+
+            <div class="form-group">
+              <label for="inputName">Full Name *</label>
+              <input
+                type="text"
+                id="inputName"
+                placeholder="e.g. Virat Kohli"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="inputSport">Sport Type *</label>
+              <!-- <select> gives us controlled vocabulary for sport types -->
+              <select id="inputSport" required>
+                <option value="">— Select sport —</option>
+                <option value="Cricket">Cricket</option>
+                <option value="Football">Football</option>
+                <option value="Basketball">Basketball</option>
+                <option value="Tennis">Tennis</option>
+                <option value="Badminton">Badminton</option>
+                <option value="Hockey">Hockey</option>
+                <option value="Volleyball">Volleyball</option>
+                <option value="Athletics">Athletics</option>
+                <option value="Swimming">Swimming</option>
+                <option value="Table Tennis">Table Tennis</option>
+                <option value="Kabaddi">Kabaddi</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="inputTeam">Team Name</label>
+              <input
+                type="text"
+                id="inputTeam"
+                placeholder="e.g. Inter Miami"
+              />
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inputGender">Gender</label>
+                <select id="inputGender">
+                  <option value="">— Select —</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="inputAge">Age</label>
+                <input
+                  type="number"
+                  id="inputAge"
+                  placeholder="25"
+                  min="15"
+                  max="50"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="inputWeight">Weight (kg)</label>
+              <input
+                type="number"
+                id="inputWeight"
+                placeholder="70"
+                min="30"
+                max="200"
+                step="0.1"
+              />
+            </div>
+
+            <!-- The button text switches between "Add Player" and "Update" -->
+            <button type="submit" class="btn-primary" id="btnSubmit">
+              + Add Player
+            </button>
+          </form>
+
+          <!-- Toast notification lives inside the panel for proximity -->
+          <div class="toast" id="toast" aria-live="polite"></div>
+        </aside>
+
+        <!-- ===============================================================
+             TABLE PANEL — displays all players fetched from the API
+        ================================================================ -->
+        <section class="table-panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Player Roster</h2>
+            <div class="table-controls">
+              <!-- Search filters the visible rows client-side -->
+              <input
+                type="search"
+                id="searchInput"
+                class="search-box"
+                placeholder="🔍  Search players…"
+              />
+              <button class="btn-refresh" id="btnRefresh" title="Refresh">
+                ↻
+              </button>
+            </div>
+          </div>
+
+
+
+          <!-- Empty state shown when there are no players -->
+          <div class="empty-state" id="emptyState" hidden>
+            <p class="empty-icon">🏟️</p>
+            <p>No players yet. Add your first one!</p>
+          </div>
+
+          <!--
+            The <tbody> is the only part we update with JavaScript.
+            Keeping the <thead> in HTML means we never have to re-render it.
+
+            We attach ONE click listener to <tbody> (event delegation) in
+            script.js instead of attaching listeners to every button.
+            This is more efficient and works for dynamically added rows.
+          -->
+          <div class="table-wrapper">
+            <table class="player-table" id="playerTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Sport</th>
+                  <th>Team</th>
+                  <th>Gender</th>
+                  <th>Age</th>
+                  <th>Weight (kg)</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="playerTableBody">
+                <!-- Rows are injected here by script.js -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!--
+      script.js is loaded at the bottom of <body> (not in <head>).
+      This means the DOM is fully parsed before any JS runs, so we never
+      get "element not found" errors when we call getElementById.
+    -->
+    <script src="script.js"></script>
+  </body>
+</html>

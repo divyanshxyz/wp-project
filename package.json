@@ -1,0 +1,17 @@
+{
+  "name": "wp-project",
+  "version": "1.0.0",
+  "description": "A full-stack web application for managing player information with a REST API backend and interactive web interface. Built for easy player CRUD operations with real-time filtering and statistics.",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.2.1",
+    "mongodb": "^7.2.0"
+  }
+}
