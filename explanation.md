@@ -1,4 +1,4 @@
-# Codebase Explanation — Player Details Module
+# Codebase Explanation — Sports Player Management
 
 A deep-dive into every significant decision in the project: **what** the code does, **why** that approach was chosen, and **what benefits** it provides.
 
@@ -116,13 +116,13 @@ app.get("/api/players", async (req, res) => {
 ### Route: POST /api/players
 
 ```js
-const { name, position, team, goals, age } = req.body;
+const { name, sport, team, gender, age, weight } = req.body;
 ```
-- **Destructuring assignment** — extracts specific fields from `req.body` in one clean line instead of `req.body.name`, `req.body.position`, etc.
+- **Destructuring assignment** — extracts specific fields from `req.body` in one clean line instead of `req.body.name`, `req.body.sport`, etc.
 
 ```js
-if (!name || !position) {
-  return res.status(400).json({ error: "Name and Position are required." });
+if (!name || !sport) {
+  return res.status(400).json({ error: "Name and Sport Type are required." });
 }
 ```
 - **Server-side validation** — we never trust the client. Even if JavaScript is disabled in the browser, the API still enforces required fields.
@@ -142,12 +142,12 @@ res.status(201).json({ _id: result.insertedId, ...newPlayer });
 
 ```js
 const filter = { _id: new ObjectId(id) };
-const update = { $set: { name, position, team, goals: Number(goals), age: Number(age) } };
+const update = { $set: { name, sport, team, gender, age: Number(age), weight: Number(weight) } };
 await db.collection(COLLECTION).updateOne(filter, update);
 ```
 - **`new ObjectId(id)`** — converts the string from the URL into a BSON ObjectId so MongoDB can match it against stored `_id` values.
 - **`$set`** — a MongoDB update operator that only replaces the listed fields. Without `$set`, `updateOne` would **replace the entire document**, deleting `createdAt` and any other field not included.
-- **`Number(goals)`** — HTTP bodies are strings. `Number()` converts `"10"` → `10` so it's stored as a number in MongoDB (important for sorting/aggregations).
+- **`Number(age)` / `Number(weight)`** — HTTP bodies are strings. `Number()` converts `"75"` → `75` so it's stored as a number in MongoDB (important for sorting/aggregations).
 
 ---
 
@@ -217,13 +217,13 @@ await db.collection(COLLECTION).updateOne(filter, update);
 
 ---
 
-### Position badge colour by class
+### Sport badge colour by class
 
 ```css
-.position-badge.Forward  { color: var(--red); }
-.position-badge.Midfielder { color: var(--accent); }
+.sport-badge.Cricket    { color: var(--green); }
+.sport-badge.Basketball { color: var(--red); }
 ```
-**Why**: In `script.js` we add the position string as a class: `class="position-badge ${position}"`. CSS then automatically applies the correct colour without any JS logic. This is the CSS doing work so JavaScript doesn't have to.
+**Why**: In `script.js` we add the sport name as a class: `class="sport-badge ${sport}"`. CSS then automatically applies the correct colour without any JS logic. This is the CSS doing work so JavaScript doesn't have to. For multi-word sports like "Table Tennis", spaces are replaced with hyphens to form valid CSS class names.
 
 ---
 
@@ -302,7 +302,8 @@ function escapeHTML(str) {
 
 ```js
 async function loadPlayers() {
-  loader.hidden = false;
+  emptyState.hidden = true;
+  tableBody.innerHTML = "";
   allPlayers = await fetchAllPlayers();
   renderTable(allPlayers);
   updateStats();

@@ -1,6 +1,6 @@
-# Player Details Module 🎯
+# Sports Player Management 🏆
 
-A full-stack web application for managing player information with a REST API backend and interactive web interface. Built for easy player CRUD operations with real-time filtering and statistics.
+A full-stack web application for managing player information across all types of sports with a REST API backend and interactive web interface. Built for easy player CRUD operations with real-time filtering and statistics.
 
 ![alt text](./images/ss.png)
 
@@ -24,23 +24,23 @@ A full-stack web application for managing player information with a REST API bac
 
 ## 📱 Overview
 
-The **Player Details Module** is a sports player management system that allows users to:
-- **Create** new player records with comprehensive details
+The **Sports Player Management** system is a multi-sport player management application that allows users to:
+- **Create** new player records with comprehensive details (sport type, gender, weight, etc.)
 - **View** all players with sorting and statistics
 - **Update** existing player information
 - **Delete** players from the database
-- **Search & Filter** players in real-time
-- **Track Statistics** like total goals, average age, and position counts
+- **Search & Filter** players in real-time by name, sport, or team
+- **Track Statistics** like total players, unique sports, average age, and average weight
 
-This is a **single-page application (SPA)** with a clean, modern sports-themed interface and RESTful API backend.
+This is a **single-page application (SPA)** with a clean, modern sports-neutral interface and RESTful API backend. It supports all types of sports — Cricket, Football, Basketball, Tennis, Hockey, Swimming, and more.
 
 ---
 
 ## ✨ Features
 
 ### Frontend Features
-- ⚡ **Real-time Search** — Filter players by name instantly without page reload
-- 📊 **Live Statistics** — View aggregate stats (total players, goals, average age, positions)
+- ⚡ **Real-time Search** — Filter players by name, sport, or team instantly without page reload
+- 📊 **Live Statistics** — View aggregate stats (total players, sports count, average age, average weight)
 - 📝 **Add/Edit Players** — Intuitive form for creating and updating player records
 - 🗑️ **Delete Players** — Remove players with confirmation
 - 📱 **Responsive Design** — Works on desktop, tablet, and mobile devices
@@ -80,10 +80,9 @@ This is a **single-page application (SPA)** with a clean, modern sports-themed i
 WP Project/
 ├── server.js           # Express server & API routes
 ├── package.json        # Project dependencies & metadata
-├── public/             # Static files served to browser
-│   ├── index.html      # HTML structure & layout
-│   ├── style.css       # Styling & theme
-│   └── script.js       # Frontend logic & interactivity
+├── index.html          # HTML structure & layout
+├── style.css           # Styling & theme
+├── script.js           # Frontend logic & interactivity
 ├── README.md           # This file
 └── explanation.md      # Detailed code documentation
 ```
@@ -157,12 +156,12 @@ Open your browser and navigate to:
 http://localhost:3000
 ```
 
-You should see the Player Management dashboard with:
-- Header with LNMIIT logo
-- Statistics bar (Total Players, Total Goals, Average Age, Positions)
+You should see the Sports Player Management dashboard with:
+- Header with LNMIIT logo and DB connection status
+- Statistics bar (Total Players, Sports, Avg. Age, Avg. Weight)
 - Player search field
 - Add/Edit player form on the left
-- Player table on the right
+- Player roster table on the right
 
 ### Stop the Server
 
@@ -188,20 +187,22 @@ http://localhost:3000/api/players
 [
   {
     "_id": "507f1f77bcf86cd799439011",
-    "name": "Cristiano Ronaldo",
-    "position": "Forward",
-    "team": "Manchester United",
-    "age": 37,
-    "goals": 140,
+    "name": "Virat Kohli",
+    "sport": "Cricket",
+    "team": "Royal Challengers Bengaluru",
+    "gender": "Male",
+    "age": 35,
+    "weight": 75,
     "createdAt": "2024-01-15T10:30:00.000Z"
   },
   {
     "_id": "507f1f77bcf86cd799439012",
-    "name": "Lionel Messi",
-    "position": "Forward",
-    "team": "Inter Miami",
-    "age": 36,
-    "goals": 129,
+    "name": "PV Sindhu",
+    "sport": "Badminton",
+    "team": "India",
+    "gender": "Female",
+    "age": 29,
+    "weight": 65,
     "createdAt": "2024-01-15T10:35:00.000Z"
   }
 ]
@@ -213,18 +214,19 @@ http://localhost:3000/api/players
 - **Method:** `POST`
 - **URL:** `/api/players`
 - **Content-Type:** `application/json`
-- **Required Fields:** `name`, `position`
-- **Optional Fields:** `team` (defaults to "Free Agent"), `age`, `goals`
+- **Required Fields:** `name`, `sport`
+- **Optional Fields:** `team` (defaults to "Free Agent"), `gender`, `age`, `weight`
 - **Status:** `201 Created`
 
 **Request Body:**
 ```json
 {
-  "name": "Lionel Messi",
-  "position": "Forward",
-  "team": "Inter Miami",
-  "age": 36,
-  "goals": 129
+  "name": "Virat Kohli",
+  "sport": "Cricket",
+  "team": "Royal Challengers Bengaluru",
+  "gender": "Male",
+  "age": 35,
+  "weight": 75
 }
 ```
 
@@ -232,11 +234,12 @@ http://localhost:3000/api/players
 ```json
 {
   "_id": "507f1f77bcf86cd799439012",
-  "name": "Lionel Messi",
-  "position": "Forward",
-  "team": "Inter Miami",
-  "age": 36,
-  "goals": 129,
+  "name": "Virat Kohli",
+  "sport": "Cricket",
+  "team": "Royal Challengers Bengaluru",
+  "gender": "Male",
+  "age": 35,
+  "weight": 75,
   "createdAt": "2024-01-15T10:35:00.000Z"
 }
 ```
@@ -252,11 +255,12 @@ http://localhost:3000/api/players
 **Request Body:**
 ```json
 {
-  "name": "Leo Messi",
-  "position": "Forward",
-  "team": "Paris Saint-Germain",
+  "name": "Virat Kohli",
+  "sport": "Cricket",
+  "team": "India",
+  "gender": "Male",
   "age": 36,
-  "goals": 130
+  "weight": 76
 }
 ```
 
@@ -290,13 +294,14 @@ http://localhost:3000/api/players
 ### Adding a Player
 
 1. Fill in the form fields on the left:
-   - **Name** (required): Player's full name
-   - **Position** (required): e.g., Forward, Midfielder, Defender, Goalkeeper
-   - **Team** (optional): Club name (defaults to "Free Agent")
+   - **Full Name** (required): Player's full name
+   - **Sport Type** (required): e.g., Cricket, Football, Basketball, Tennis, etc.
+   - **Team Name** (optional): Team name (defaults to "Free Agent")
+   - **Gender** (optional): Male, Female, or Other
    - **Age** (optional): Player's age
-   - **Goals** (optional): Total career goals
+   - **Weight** (optional): Player's weight in kilograms
 
-2. Click **"Add Player"** button
+2. Click **"+ Add Player"** button
 3. A success toast notification appears
 4. The new player appears in the table immediately
 5. Statistics update automatically
@@ -337,10 +342,11 @@ Each player document has the following structure:
 {
   _id: ObjectId,           // MongoDB auto-generated unique ID
   name: String,            // Player's full name (required)
-  position: String,        // Playing position (required)
-  team: String,            // Club name (optional, defaults to "Free Agent")
+  sport: String,           // Sport type (required) — e.g., Cricket, Football, Basketball
+  team: String,            // Team name (optional, defaults to "Free Agent")
+  gender: String,          // Gender (optional) — Male, Female, or Other
   age: Number,             // Player's age (optional, defaults to 0)
-  goals: Number,           // Total goals scored (optional, defaults to 0)
+  weight: Number,          // Weight in kg (optional, defaults to 0)
   createdAt: Date          // Timestamp of record creation
 }
 ```
@@ -349,11 +355,12 @@ Each player document has the following structure:
 ```json
 {
   "_id": ObjectId("507f1f77bcf86cd799439012"),
-  "name": "Lionel Messi",
-  "position": "Forward",
-  "team": "Inter Miami",
-  "age": 36,
-  "goals": 129,
+  "name": "Virat Kohli",
+  "sport": "Cricket",
+  "team": "Royal Challengers Bengaluru",
+  "gender": "Male",
+  "age": 35,
+  "weight": 75,
   "createdAt": ISODate("2024-01-15T10:35:00.000Z")
 }
 ```
@@ -413,7 +420,7 @@ script.js validates & calls fetch(POST /api/players)
          ↓
 server.js receives POST request
          ↓
-Validates: name & position required
+Validates: name & sport type required
          ↓
 MongoDB insertOne() creates new document
          ↓
@@ -510,7 +517,7 @@ npm install
 ### Issue: Form not submitting
 **Cause:** Validation error or network issue
 **Solution:**
-1. Check that Name and Position fields are filled
+1. Check that Name and Sport Type fields are filled
 2. Open browser console (`F12 → Console`) and look for error messages
 3. Verify server is running and accessible at `http://localhost:3000`
 
@@ -537,8 +544,8 @@ npm install
 
 ## 👨‍💻 Author
 
-Created for LNMIIT Player Management System
+Created for LNMIIT Sports Player Management System
 
 ---
 
-**Last Updated:** May 1, 2026
+**Last Updated:** May 2, 2026
