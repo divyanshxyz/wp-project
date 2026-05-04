@@ -1,291 +1,239 @@
-# Codebase Explanation — Sports Player Management
+# Code Explanation - Sports Player Management
 
-A deep-dive into every significant decision in the project: **what** the code does, **why** that approach was chosen, and **what benefits** it provides.
+This document explains how each file in the project works and why certain decisions were made.
 
 ---
 
 ## Table of Contents
-1. [Project Architecture](#1-project-architecture)
-2. [server.js — Line-by-Line](#2-serverjs--line-by-line)
-3. [index.html — Key Decisions](#3-indexhtml--key-decisions)
-4. [style.css — Key Decisions](#4-stylecss--key-decisions)
-5. [script.js — Line-by-Line](#5-scriptjs--line-by-line)
+1. [Project Structure](#1-project-structure)
+2. [.env - Configuration](#2-env---configuration)
+3. [db.js - Database Connection](#3-dbjs---database-connection)
+4. [server.js - Entry Point](#4-serverjs---entry-point)
+5. [routes/players.js - API Routes](#5-routesplayersjs---api-routes)
+6. [index.html - Page Structure](#6-indexhtml---page-structure)
+7. [style.css - Styling](#7-stylecss---styling)
+8. [script.js - Frontend Logic](#8-scriptjs---frontend-logic)
 
 ---
 
-## 1. Project Architecture
+## 1. Project Structure
 
 ```
-player-module/
-├── server.js          ← Node.js + Express backend (API + static file server)
-├── package.json       ← Dependencies: express, mongodb
-└── public/            ← Everything in here is served directly to the browser
-    ├── index.html
-    ├── style.css
-    └── script.js
+WP Project/
+  .env                  # environment variables (MongoDB URL, port)
+  db.js                 # database connection module
+  server.js             # main entry point
+  routes/
+    players.js          # API route handlers
+  index.html            # page layout
+  style.css             # styling
+  script.js             # frontend JavaScript
+  package.json          # dependencies
 ```
 
-**Why this structure?**
-Separating `public/` from `server.js` is the standard convention for Express apps.  
-`express.static("public")` serves the frontend; the rest of `server.js` handles the API.  
-There is **zero build step** — no Webpack, no bundler — keeping it simple for a class project.
+The project is split into multiple files so that each file has one clear responsibility. The database logic is in `db.js`, the API routes are in `routes/players.js`, and `server.js` ties everything together. The frontend files (`index.html`, `style.css`, `script.js`) are served as static files by Express.
 
 ---
 
-## 2. `server.js` — Line-by-Line
+## 2. `.env` - Configuration
 
-### Imports and Setup
+```
+MONGO_URI=mongodb://127.0.0.1:27017
+DB_NAME=playerdb
+PORT=3000
+```
+
+The MongoDB connection string and other settings are stored in a `.env` file instead of being hardcoded in the source code. The `dotenv` package loads these values into `process.env` when the server starts. This makes it easy to change the database URL or port without editing any code. The `.env` file is listed in `.gitignore` so it does not get committed to version control.
+
+---
+
+## 3. `db.js` - Database Connection
 
 ```js
-const express = require("express");
-const { MongoClient, ObjectId } = require("mongodb");
-const path = require("path");
-```
-- **`express`** — imported from the `express` npm package. It wraps Node's `http` module with a clean router API.
-- **`MongoClient`** — the official MongoDB driver class for connecting to a database.
-- **`ObjectId`** — MongoDB stores `_id` fields as BSON ObjectIds (12-byte binary), not plain strings. We import `ObjectId` so we can convert URL strings (like `"6849abc..."`) back into the type MongoDB expects.
-- **`path`** — a core Node.js module for building file paths in an OS-agnostic way (`path.join` uses `\` on Windows, `/` on Mac/Linux automatically).
+const { MongoClient } = require("mongodb");
 
----
-
-```js
-const PORT = 3000;
-const MONGO_URI = "mongodb://127.0.0.1:27017";
-```
-- **`PORT`** — hardcoded for simplicity. In production you'd read `process.env.PORT`.
-- **`127.0.0.1`** — the loopback address (same machine). `27017` is MongoDB's default port.
-
----
-
-```js
 let db;
+
+async function connectDB(uri, dbName) {
+  const client = await MongoClient.connect(uri);
+  db = client.db(dbName);
+  console.log("Connected to MongoDB:", dbName);
+  return db;
+}
+
+function getDB() {
+  return db;
+}
+
+module.exports = { connectDB, getDB };
 ```
-- Declared at **module scope** (outside any function) so every route handler can access it.
-- We use `let` (not `const`) because it starts as `undefined` and gets assigned after the async connection succeeds.
+
+This file handles the MongoDB connection. `MongoClient.connect()` is an asynchronous operation, so we use `async/await` to wait for the connection to be established before doing anything else.
+
+The `db` variable is declared at module scope so it can be shared. `connectDB` is called once when the server starts, and after that any file can call `getDB()` to access the database instance without reconnecting.
+
+We export both functions using `module.exports` so other files can import them with `require()`.
 
 ---
 
-### `connectDB` function
+## 4. `server.js` - Entry Point
 
 ```js
-async function connectDB() {
-  const client = await MongoClient.connect(MONGO_URI);
-  db = client.db(DB_NAME);
-}
+require("dotenv").config();
+const express = require("express");
+const path = require("path");
+const { connectDB } = require("./db");
+const playerRoutes = require("./routes/players");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
 ```
-- `MongoClient.connect()` is **asynchronous** — it opens a network socket to MongoDB, which takes a non-zero amount of time.
-- `await` pauses `connectDB()` until the connection is established, then assigns `client`.
-- `client.db(DB_NAME)` selects (or creates) the `playerdb` database. MongoDB creates it lazily on first write.
-- **Benefit of `async/await` here**: the alternative `.then()/.catch()` chain would be harder to read and reason about.
 
----
-
-### Middleware
+The first line loads environment variables from `.env` into `process.env`. Then we import Express, the database module, and the player routes.
 
 ```js
 app.use(express.json());
+app.use(express.static(__dirname));
 ```
-- **What it does**: reads the raw request body, parses it as JSON, and attaches the result to `req.body`.
-- **Why it's needed**: HTTP bodies arrive as raw bytes (a stream). Without this, `req.body` would be `undefined` in POST/PUT routes.
-- **Non-blocking**: Express processes the body asynchronously. The event loop is never blocked waiting for bytes.
+
+`express.json()` is middleware that parses incoming JSON request bodies. Without it, `req.body` would be `undefined` in POST and PUT routes.
+
+`express.static(__dirname)` serves the frontend files (HTML, CSS, JS) from the project directory. This means one server handles both the API and the frontend.
 
 ```js
-app.use(express.static(path.join(__dirname, "public")));
+app.use("/api/players", playerRoutes);
 ```
-- **`__dirname`** — a Node.js global that holds the directory of the current file (`server.js`'s folder). Using `path.join` ensures the path is correct regardless of the OS.
-- **`express.static`** — tells Express: "if a request comes in for `/index.html`, `/style.css`, etc., just send the file directly from the `public/` folder."
-- **Why this matters**: it means we only need **one server** for both the API and the frontend.
 
----
-
-### Route: GET /api/players
-
-```js
-app.get("/api/players", async (req, res) => {
-  const players = await db.collection(COLLECTION).find({}).toArray();
-  res.json(players);
-});
-```
-- `find({})` — empty filter `{}` means "match all documents." Returns a MongoDB **cursor** (a lazy iterator, not all data at once).
-- `.toArray()` — converts the cursor into a JS Array. This is **awaited** because it performs I/O to read all documents.
-- `res.json(players)` — serializes the JS array to a JSON string and sets `Content-Type: application/json` automatically.
-- **Non-blocking**: `await` yields the event loop while MongoDB reads; other requests can be processed in parallel.
-
----
-
-### Route: POST /api/players
-
-```js
-const { name, sport, team, gender, age, weight } = req.body;
-```
-- **Destructuring assignment** — extracts specific fields from `req.body` in one clean line instead of `req.body.name`, `req.body.sport`, etc.
-
-```js
-if (!name || !sport) {
-  return res.status(400).json({ error: "Name and Sport Type are required." });
-}
-```
-- **Server-side validation** — we never trust the client. Even if JavaScript is disabled in the browser, the API still enforces required fields.
-- `400 Bad Request` is the correct HTTP status for "you sent invalid data."
-
-```js
-const result = await db.collection(COLLECTION).insertOne(newPlayer);
-res.status(201).json({ _id: result.insertedId, ...newPlayer });
-```
-- `insertOne()` returns an object with `insertedId` (the new `_id`).
-- `201 Created` is the semantically correct success status for resource creation (vs. `200 OK` which means "request processed, here's a result").
-- **Spread operator** `...newPlayer` copies all properties of `newPlayer` into the response object, so the frontend gets the full document including `_id`.
-
----
-
-### Route: PUT /api/players/:id
-
-```js
-const filter = { _id: new ObjectId(id) };
-const update = { $set: { name, sport, team, gender, age: Number(age), weight: Number(weight) } };
-await db.collection(COLLECTION).updateOne(filter, update);
-```
-- **`new ObjectId(id)`** — converts the string from the URL into a BSON ObjectId so MongoDB can match it against stored `_id` values.
-- **`$set`** — a MongoDB update operator that only replaces the listed fields. Without `$set`, `updateOne` would **replace the entire document**, deleting `createdAt` and any other field not included.
-- **`Number(age)` / `Number(weight)`** — HTTP bodies are strings. `Number()` converts `"75"` → `75` so it's stored as a number in MongoDB (important for sorting/aggregations).
-
----
-
-### IIFE Startup
+This mounts all the player routes under `/api/players`. So a GET request to `/api/players` will be handled by the router defined in `routes/players.js`.
 
 ```js
 (async () => {
-  await connectDB();
-  app.listen(PORT, ...);
+  try {
+    await connectDB(process.env.MONGO_URI, process.env.DB_NAME);
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error("Could not connect to MongoDB:", err.message);
+    process.exit(1);
+  }
 })();
 ```
-- **IIFE** (Immediately Invoked Function Expression) — a function that defines and calls itself immediately. The `async` keyword makes it return a Promise internally so we can `await` inside.
-- **Why**: `app.listen()` must not run until the database is ready. Sequencing them with `await` guarantees this.
-- **`process.exit(1)`** — if MongoDB refuses connection, we exit with error code `1` so the OS/container knows the process failed.
+
+This is an IIFE (Immediately Invoked Function Expression). It connects to MongoDB first, and only then starts listening for requests. This ensures no request is handled before the database is ready. If the connection fails, `process.exit(1)` stops the server.
 
 ---
 
-## 3. `index.html` — Key Decisions
+## 5. `routes/players.js` - API Routes
 
-### `<script>` at bottom of `<body>`
+This file defines four routes using Express Router:
 
-```html
-<script src="script.js"></script>   <!-- at the bottom of <body> -->
+**GET /** - Returns all players from the database.
+```js
+const players = await getDB().collection(COLLECTION).find({}).toArray();
+res.json(players);
 ```
-**Why**: When the browser parses HTML top-to-bottom, a `<script>` in `<head>` blocks rendering until the file is downloaded and executed. Placing it at the bottom means the entire DOM is built before JS runs — so `getElementById()` always finds its element.
+`find({})` with an empty filter returns all documents. `toArray()` converts the MongoDB cursor into a JavaScript array.
 
----
-
-### Data attributes on action buttons
-
-```html
-<button data-action="edit" data-id="${player._id}">✏ Edit</button>
+**POST /** - Creates a new player.
+```js
+const { name, sport, team, gender, age, weight } = req.body;
 ```
-**Why**: Instead of embedding function calls in `onclick=""`, we store metadata in `data-*` attributes and read them in a single event listener on the parent element (see Event Delegation below). This is cleaner and decouples HTML from JavaScript.
+Destructuring extracts the fields from the request body. The server validates that `name` and `sport` are present and returns a 400 error if they are missing.
 
----
+`Number(age)` converts the string value from the request body into a number so MongoDB stores it correctly.
 
-### `aria-live="polite"` on toast
+`insertOne()` adds the document and returns the generated `_id`. We respond with status 201 (Created).
 
-```html
-<div class="toast" id="toast" aria-live="polite"></div>
+**PUT /:id** - Updates an existing player.
+```js
+const filter = { _id: new ObjectId(req.params.id) };
+const update = { $set: { name, sport, team, gender, age: Number(age), weight: Number(weight) } };
 ```
-**Why**: Screen readers (for visually impaired users) won't automatically announce dynamically injected content. `aria-live="polite"` tells them to announce changes to this element after the user finishes their current interaction.
+`new ObjectId(id)` converts the string ID from the URL into a MongoDB ObjectId. The `$set` operator updates only the specified fields without replacing the entire document. If no document matches the filter, we return 404.
+
+**DELETE /:id** - Deletes a player by ID. Returns 404 if the player is not found.
+
+All routes are wrapped in try/catch blocks. If something goes wrong with the database operation, we catch the error and return a 500 status code with the error message.
 
 ---
 
-### Hidden `<input>` for edit state
+## 6. `index.html` - Page Structure
 
+The HTML file contains:
+- A header with the app title and a database connection status indicator
+- A stats bar with four cards (total players, sports count, average age, average weight)
+- A two-column layout: form panel on the left, player table on the right
+- A hidden input field (`editingId`) that stores the ID of the player being edited
+
+Key decisions:
+
+**Hidden input for edit state:**
 ```html
 <input type="hidden" id="editingId" value="" />
 ```
-**Why**: This stores the `_id` of the player currently being edited. When the form submits, we check if this field has a value — if yes, we `PUT`; if no, we `POST`. It's a simple way to reuse one form for both Create and Update.
+When the user clicks "Edit" on a player, the player's `_id` is stored in this hidden field. When the form is submitted, `script.js` checks this field to decide whether to send a POST (create) or PUT (update) request. This lets us reuse one form for both operations.
 
----
-
-## 4. `style.css` — Key Decisions
-
-### CSS Custom Properties (variables)
-
-```css
-:root {
-  --accent: #f5a623;
-  --bg-surface: #161b22;
-}
+**Script tag at the bottom:**
+```html
+<script src="script.js"></script>
 ```
-**Why**: Centralising values in `:root` means you can retheme the entire UI by changing one block. It also makes colours self-documenting (e.g. `var(--accent)` is more readable than `#f5a623`).
+The script is loaded at the end of the body so the DOM is fully built before JavaScript runs. This way `getElementById` calls always find their elements.
 
----
-
-### Sport badge colour by class
-
-```css
-.sport-badge.Cricket    { color: var(--green); }
-.sport-badge.Basketball { color: var(--red); }
+**Data attributes on buttons:**
+```html
+<button data-action="edit" data-id="${player._id}">Edit</button>
 ```
-**Why**: In `script.js` we add the sport name as a class: `class="sport-badge ${sport}"`. CSS then automatically applies the correct colour without any JS logic. This is the CSS doing work so JavaScript doesn't have to. For multi-word sports like "Table Tennis", spaces are replaced with hyphens to form valid CSS class names.
+Instead of using inline `onclick` handlers, we use `data-*` attributes. `script.js` reads these using event delegation (one click listener on the parent table body handles all buttons).
 
 ---
 
-### `overflow-x: auto` on table wrapper
+## 7. `style.css` - Styling
 
-```css
-.table-wrapper { overflow-x: auto; }
-```
-**Why**: On mobile screens, wide tables would overflow and break the layout. `overflow-x: auto` adds a horizontal scrollbar just on the table, leaving the rest of the page intact.
+The CSS uses a simple light theme with a dark header. Key points:
+
+- The reset (`* { margin: 0; padding: 0; box-sizing: border-box; }`) removes default browser spacing so elements are sized consistently.
+- The layout uses CSS Grid. The stats bar is a 4-column grid. The main content area is a 2-column grid (form on the left, table on the right).
+- On screens smaller than 900px, the grid switches to a single column using a media query.
+- The table uses `overflow-x: auto` on its wrapper so it scrolls horizontally on small screens instead of breaking the layout.
+- Toast notifications use `max-height` and `opacity` to show and hide. When the `show` class is added by JavaScript, the toast becomes visible.
+- Buttons and inputs have simple hover and focus styles using direct color values (no CSS variables).
 
 ---
 
-## 5. `script.js` — Line-by-Line
+## 8. `script.js` - Frontend Logic
 
-### Section 1 — DOM References cached at top
+### DOM References
 
 ```js
 const playerForm = document.getElementById("playerForm");
+const inputName = document.getElementById("inputName");
 ```
-- **`getElementById`** — the fastest DOM selector (uses an internal hash map). Prefix `#` is **not** used here (unlike `querySelector("#playerForm")`).
-- **Why cache them**: calling `getElementById` inside a function that runs 100 times would query the DOM 100 times. Caching runs it once.
+All DOM elements are selected once at the top of the file and stored in variables. This avoids querying the DOM repeatedly every time a function runs.
 
----
-
-### Section 2 — `allPlayers` array as state
-
-```js
-let allPlayers = [];
-```
-- A module-level Array acting as our **in-memory state**.
-- **Why**: Storing fetched data here means the search filter can filter without making additional network requests. We only hit the API when data actually changes (create/update/delete).
-
----
-
-### Section 3 — API Helpers
+### API Helper Functions
 
 ```js
 async function fetchAllPlayers() {
   const response = await fetch(API_BASE);
-  if (!response.ok) throw new Error(`GET failed: ${response.status}`);
+  if (!response.ok) throw new Error("GET failed: " + response.status);
   return response.json();
 }
 ```
-- **`fetch()`** — the modern browser API for HTTP requests. Returns a **Promise** that resolves to a `Response`.
-- **`await`** — suspends this `async` function (yields the event loop) until the Promise resolves. JavaScript remains responsive to user events during the wait.
-- **`response.ok`** — true for status 200–299. We check it manually because `fetch` only rejects on network failures (DNS, no connection), **not** on HTTP error codes like 404 or 500.
-- **`throw new Error(...)`** — converts a bad HTTP response into a JavaScript exception so callers can catch it uniformly with `try/catch`.
-- **`response.json()`** — also returns a Promise; `return` passes it to the caller which can `await` it.
+The Fetch API is used to make HTTP requests. `fetch()` returns a Promise. We use `async/await` to wait for the response.
 
-**Benefit of separate helper functions**: `createPlayer`, `updatePlayer`, and `deletePlayer` follow the same pattern. If the API URL changes, we update it in one place, not scattered across event handlers.
+`response.ok` is true for status codes 200-299. We check it manually because `fetch` only rejects on network errors (like no internet), not on HTTP error codes like 404 or 500.
 
----
+Each API operation (fetch, create, update, delete) has its own function. This keeps the code organized and means the API URL only needs to be defined once.
 
-### Section 4 — `renderTable`
+### Rendering the Table
 
 ```js
-tableBody.innerHTML = players.map((player, index) => `<tr>...</tr>`).join("");
+tableBody.innerHTML = players.map((player, i) => `<tr>...</tr>`).join("");
 ```
-- **`Array.map()`** — transforms the array of player objects into an array of HTML strings (one per player). It does **not** mutate the original array.
-- **`.join("")`** — collapses `["<tr>...</tr>", "<tr>...</tr>"]` into a single string. Without the argument, `.join()` would insert commas.
-- **Single `innerHTML` assignment** — setting `innerHTML` once is faster than calling `appendChild` in a loop, because the browser does one reflow instead of many.
+`Array.map()` transforms each player object into an HTML string. `.join("")` combines all the strings into one. Setting `innerHTML` once is faster than creating and appending DOM elements in a loop.
 
+**XSS Protection:**
 ```js
 function escapeHTML(str) {
   const div = document.createElement("div");
@@ -293,100 +241,62 @@ function escapeHTML(str) {
   return div.innerHTML;
 }
 ```
-- **Why**: If a player's name was `<script>alert('xss')</script>`, injecting it directly into `innerHTML` would execute that script. `createTextNode` treats the string as plain text, not markup. `div.innerHTML` then gives us the safe HTML-escaped version (e.g. `&lt;script&gt;`).
-- **Benefit**: Prevents Cross-Site Scripting (XSS) attacks.
+Before inserting user-provided text into HTML, we escape it. If someone entered `<script>alert('xss')</script>` as a player name, this function converts the angle brackets to safe HTML entities so the script does not execute.
 
----
-
-### Section 5 — `loadPlayers`
+### Form Submit Handler
 
 ```js
-async function loadPlayers() {
-  emptyState.hidden = true;
-  tableBody.innerHTML = "";
-  allPlayers = await fetchAllPlayers();
-  renderTable(allPlayers);
-  updateStats();
-}
-```
-- **Orchestration function** — calls helpers in the right order. The `await` ensures we don't render before data arrives.
-- `try/catch` around the `await` catches both network errors and our manually thrown errors from `fetchAllPlayers`.
-
----
-
-### Section 6 — Form Submit Handler
-
-```js
-playerForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
+playerForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
   ...
 });
 ```
-- **`"submit"` event** — fires when the form is submitted via button click OR pressing Enter in a text field. More accessible than a click listener on the button.
-- **`event.preventDefault()`** — stops the browser's default behaviour (reloading the page with query params in the URL).
-- **`async` callback** — the event callback is an `async` function, allowing us to use `await` inside it.
+We listen for the `submit` event on the form instead of a click on the button. This also fires when the user presses Enter in a text field.
+
+`e.preventDefault()` stops the browser from reloading the page (the default behavior for form submission).
+
+The submit button is disabled while the request is in progress to prevent double-submission. The `finally` block re-enables it whether the request succeeds or fails.
+
+### Event Delegation
 
 ```js
-btnSubmit.disabled = true;   // prevent double-submit
-```
-- **Why**: Clicking "Add" twice quickly would send two identical POST requests, creating duplicate players. Disabling the button prevents this.
-
-```js
-} finally {
-  btnSubmit.disabled = false;
-}
-```
-- **`finally`** — runs whether the `try` block succeeded or the `catch` block ran. It guarantees the button is always re-enabled, even after an error.
-
----
-
-### Section 7 — Event Delegation
-
-```js
-tableBody.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-action]");
+tableBody.addEventListener("click", async (e) => {
+  const button = e.target.closest("[data-action]");
   if (!button) return;
   ...
 });
 ```
-- **Event Delegation** — instead of attaching a listener to every `<button>` in the table (which would need to be re-added every time we call `renderTable`), we attach **one** listener to the parent `<tbody>`.
-- **How events bubble**: when a button is clicked, the `click` event travels UP the DOM tree (bubbles) through `<tr>` → `<tbody>` → `<table>` → etc. We intercept it at `<tbody>`.
-- **`event.target.closest("[data-action]")`** — `event.target` is the exact clicked element (could be text inside the button). `.closest()` walks up the tree until it finds an ancestor (or self) matching the CSS selector. If the user clicks outside a button, it returns `null`.
-- **Benefit**: O(1) event listeners regardless of how many players are in the table. Also works automatically for newly injected rows.
+Instead of attaching click listeners to every Edit and Remove button (which would need to be re-attached every time the table is re-rendered), we attach one listener to the parent `<tbody>`.
 
----
+When a button is clicked, the click event bubbles up through the DOM. We catch it at the `<tbody>` level and use `event.target.closest("[data-action]")` to find which button was clicked. This is called event delegation.
 
-### Section 8 — `handleEditClick`
-
-```js
-const player = allPlayers.find((p) => p._id === playerId);
-inputName.value = player.name;
-editingId.value = player._id;
-```
-- **`Array.find()`** — returns the first object where the callback returns `true`. More readable than a `for` loop with a `break`.
-- **Pre-filling the form** — setting `.value` on input elements is direct DOM manipulation. The form now shows the player's existing data so the user only edits what they need.
-- **`editingId.value = player._id`** — stores the `_id` in the hidden field. The submit handler reads this to decide PUT vs POST.
-
----
-
-### Section 9 — Search Filter
+### Search Filter
 
 ```js
 searchInput.addEventListener("input", () => {
-  const filtered = allPlayers.filter(p => p.name.toLowerCase().includes(query));
+  const filtered = allPlayers.filter(
+    (p) =>
+      p.name.toLowerCase().includes(query) ||
+      p.sport.toLowerCase().includes(query) ||
+      (p.team && p.team.toLowerCase().includes(query))
+  );
   renderTable(filtered);
 });
 ```
-- **`"input"` event** — fires on every keystroke (unlike `"change"` which fires only on blur). Gives real-time filtering.
-- **`Array.filter()`** — returns a **new array** of matching players. `allPlayers` is never mutated, so we can always get the full list back by calling `renderTable(allPlayers)`.
-- **Client-side filtering** — no network request needed. The data is already in `allPlayers`. For very large datasets (thousands of records), you'd add a `?search=` query param to the API instead.
+The search works entirely on the client side. All players are already stored in the `allPlayers` array. `Array.filter()` returns a new array with only the matching players. No network request is needed.
 
----
+The `input` event fires on every keystroke, so the table updates in real time as the user types.
 
-### Section 12 — Initialization
+### In-Memory State
 
 ```js
-loadPlayers(); // called at the bottom of script.js
+let allPlayers = [];
 ```
-- **Why here and not in an event listener**: because `script.js` is at the bottom of `<body>`, the DOM is fully parsed when this runs. We want data to load immediately on page open, so we call `loadPlayers()` directly.
-- `loadPlayers()` returns a Promise (it's `async`), but we don't `await` it here because there's nothing to do after — the function handles its own rendering and error display internally.
+The `allPlayers` array acts as a local cache of the data from the server. After every create, update, or delete operation, we call `loadPlayers()` which fetches fresh data from the API and updates both the array and the table. The search filter reads from this array instead of making additional API calls.
+
+### Initialization
+
+```js
+loadPlayers();
+```
+This is called at the bottom of the file. Since the script tag is at the end of the HTML body, the DOM is already ready when this runs. It fetches all players from the API and renders the table.
