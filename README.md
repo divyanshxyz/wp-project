@@ -2,7 +2,9 @@
 
 A full-stack web application for managing player information across different sports. Built with Node.js, Express, MongoDB, and vanilla JavaScript. Features a modern dark industrial theme, sidebar navigation, and bulk player management.
 
-![alt text](./images/ss.png)
+![alt text](./images/image.png)
+---
+![alt text](./images/image-1.png)
 
 ---
 
