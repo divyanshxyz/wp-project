@@ -349,6 +349,10 @@ body {
   grid-template-columns: 1fr 1fr 1fr;
 }
 
+.form-row-4 {
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+}
+
 .form-section-label {
   font-family: var(--font-display);
   font-size: 0.85rem;

@@ -128,7 +128,7 @@
 
           <div class="form-section-label">Shared Details</div>
 
-          <div class="form-row form-row-3">
+          <div class="form-row">
             <div class="form-group">
               <label for="inputSport">Sport Type *</label>
               <select id="inputSport" required>
@@ -151,15 +151,6 @@
               <label for="inputTeam">Team Name *</label>
               <input type="text" id="inputTeam" placeholder="e.g. Royal Challengers Bangalore" required />
             </div>
-            <div class="form-group">
-              <label for="inputGender">Gender *</label>
-              <select id="inputGender" required>
-                <option value="">-- Select --</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
           </div>
 
           <div class="form-section-label">Player Details</div>
@@ -169,10 +160,19 @@
               <div class="player-row-header">
                 <span class="player-row-number">Player 1</span>
               </div>
-              <div class="form-row form-row-3">
+              <div class="form-row form-row-4">
                 <div class="form-group">
                   <label>Full Name *</label>
                   <input type="text" class="row-name" placeholder="e.g. Virat Kohli" required />
+                </div>
+                <div class="form-group">
+                  <label>Gender *</label>
+                  <select class="row-gender" required>
+                    <option value="">-- Select --</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
                 </div>
                 <div class="form-group">
                   <label>Age *</label>

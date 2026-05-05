@@ -39,14 +39,14 @@ The UI is anchored by a persistent **Sidebar** (`<aside class="sidebar">` in `in
 One of the key innovations is the ability to add multiple players belonging to the same team/sport simultaneously.
 
 ### Frontend Logic (`script.js`)
-- **Shared Details**: Fields like `Sport`, `Team`, and `Gender` are collected once at the top of the form.
-- **Dynamic Rows**: The `createPlayerRowHTML` function generates new player input rows (Name, Age, Weight) on demand.
+- **Shared Details**: Fields like `Sport` and `Team` are collected once at the top of the form.
+- **Dynamic Rows**: The `createPlayerRowHTML` function generates new player input rows (**Name, Gender, Age, Weight**) on demand.
 - **Row Management**: `renumberRows()` ensures the UI labels (e.g., "Player 3") stay accurate when rows are added or removed.
-- **Submission**: `getPlayerRowsData()` scrapes all active rows. If multiple rows exist, the script calls the `/api/players/bulk` endpoint.
+- **Submission**: `getPlayerRowsData()` scrapes all active rows, including individual gender selections. If multiple rows exist, the script calls the `/api/players/bulk` endpoint.
 
 ### Backend Logic (`routes/players.js`)
 - **The Bulk Route**: `router.post("/bulk", ...)` accepts an array of player objects.
-- **Validation**: It manually triggers `validateSync()` on each Mongoose document before inserting. This ensures that if even one player in the batch fails validation (e.g., a number in the name), the entire batch is rejected with a specific error message (e.g., "Player 2: Name is invalid").
+- **Validation**: It manually triggers `validateSync()` on each Mongoose document before inserting. This ensures that if even one player in the batch fails validation, the entire batch is rejected with a specific error message.
 - **Efficiency**: Uses `Player.insertMany()` for a single atomic database operation.
 
 ---
@@ -69,7 +69,7 @@ Data integrity is maintained by a global `sortPlayers()` function.
 The system allows roster portability through a client-side CSV generator.
 
 - **Implementation**: The `exportToCsv()` function in `script.js` iterates through the `allPlayers` array.
-- **Sanitization**: It wraps string values in quotes and escapes internal double-quotes (e.g., `"` becomes `""`) to ensure the CSV is valid even if a player's name contains commas.
+- **Sanitization**: It wraps string values in quotes and escapes internal double-quotes to ensure the CSV is valid even if a player's name contains commas.
 - **Download**: It creates a `Blob` with `text/csv` type and triggers a virtual link click to initiate the download without needing a backend generator.
 
 ---
@@ -88,7 +88,7 @@ The `models/Player.js` file uses Mongoose to enforce strict data types and regex
 The `style.css` file implements a "Dark Slate + Electric Amber" theme.
 
 - **Centering**: The `page-add` view uses `justify-content: center` to keep the expanded form panel perfectly balanced on the screen.
-- **Form Design**: The form panel uses a 3-column grid (`.form-row-3`) for shared details to maximize space.
+- **Form Design**: Shared details use a standard 2-column grid, while player rows utilize a **4-column grid** (`.form-row-4`) to fit Name, Gender, Age, and Weight in a single line.
 - **Visual Feedback**: Interactive elements like `.btn-add-row` use dashed borders and amber transitions to feel alive and responsive.
 
 ---

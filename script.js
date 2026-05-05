@@ -1,7 +1,6 @@
 const playerForm = document.getElementById("playerForm");
 const inputSport = document.getElementById("inputSport");
 const inputTeam = document.getElementById("inputTeam");
-const inputGender = document.getElementById("inputGender");
 const editingId = document.getElementById("editingId");
 
 const formTitle = document.getElementById("formTitle");
@@ -68,10 +67,19 @@ function createPlayerRowHTML(index) {
       <span class="player-row-number">Player ${index + 1}</span>
       <button type="button" class="btn-remove-row" data-remove="${index}">Remove</button>
     </div>
-    <div class="form-row form-row-3">
+    <div class="form-row form-row-4">
       <div class="form-group">
         <label>Full Name *</label>
         <input type="text" class="row-name" placeholder="e.g. Virat Kohli" required />
+      </div>
+      <div class="form-group">
+        <label>Gender *</label>
+        <select class="row-gender" required>
+          <option value="">-- Select --</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
       <div class="form-group">
         <label>Age *</label>
@@ -122,6 +130,7 @@ function getPlayerRowsData() {
   rows.forEach((row) => {
     players.push({
       name: row.querySelector(".row-name").value.trim(),
+      gender: row.querySelector(".row-gender").value,
       age: row.querySelector(".row-age").value,
       weight: row.querySelector(".row-weight").value,
     });
@@ -298,7 +307,6 @@ playerForm.addEventListener("submit", async (e) => {
 
   const sport = inputSport.value;
   const team = inputTeam.value.trim();
-  const gender = inputGender.value;
 
   if (!sport) {
     showToast("Sport Type is required.", "error");
@@ -307,11 +315,6 @@ playerForm.addEventListener("submit", async (e) => {
 
   if (!team) {
     showToast("Team Name is required.", "error");
-    return;
-  }
-
-  if (!gender) {
-    showToast("Gender is required.", "error");
     return;
   }
 
@@ -332,7 +335,7 @@ playerForm.addEventListener("submit", async (e) => {
         name: rowData.name,
         sport,
         team,
-        gender,
+        gender: rowData.gender,
         age: rowData.age,
         weight: rowData.weight,
       });
@@ -351,7 +354,7 @@ playerForm.addEventListener("submit", async (e) => {
         name: row.name,
         sport,
         team,
-        gender,
+        gender: row.gender,
         age: row.age,
         weight: row.weight,
       }));
@@ -397,13 +400,13 @@ function handleEdit(playerId) {
 
   inputSport.value = player.sport;
   inputTeam.value = player.team || "";
-  inputGender.value = player.gender || "";
   editingId.value = player._id;
 
   playerRowsContainer.innerHTML = "";
   const row = createPlayerRowHTML(0);
   playerRowsContainer.appendChild(row);
   row.querySelector(".row-name").value = player.name;
+  row.querySelector(".row-gender").value = player.gender || "";
   row.querySelector(".row-age").value = player.age || "";
   row.querySelector(".row-weight").value = player.weight || "";
   rowCount = 1;

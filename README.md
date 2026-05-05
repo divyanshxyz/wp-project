@@ -2,7 +2,7 @@
 
 A full-stack web application for managing player information across different sports. Built with Node.js, Express, MongoDB, and vanilla JavaScript. Features a modern dark industrial theme, sidebar navigation, and bulk player management.
 
-![alt text](./images/image.png)
+![alt text](./images/ss.png)
 
 ---
 
@@ -25,7 +25,7 @@ A full-stack web application for managing player information across different sp
 ## Overview
 
 This system lets users manage player records for any sport with a focus on speed and ease of use. You can:
-- **Bulk Add Players**: Set shared details (Sport, Team, Gender) once and add multiple player records at once.
+- **Bulk Add Players**: Set shared details (Sport, Team) once and add multiple player records with unique names, genders, and physical stats.
 - **Side Panel Navigation**: Quickly switch between the Player Roster and the Add Player form.
 - **Export Data**: Download your entire roster as a CSV file for external use.
 - **Live Statistics**: View a real-time dashboard of total players, sports, teams, and averages.
@@ -110,8 +110,8 @@ Remove a player from the system.
 
 ### Bulk Adding Players
 1. Select **"Add Player"** from the sidebar.
-2. Enter the **Shared Details** (Sport, Team, Gender) at the top.
-3. Enter player-specific details (Name, Age, Weight) in the first row.
+2. Enter the **Shared Details** (Sport, Team) at the top.
+3. Enter player-specific details (Name, Gender, Age, Weight) in the first row.
 4. Click **"+ Add Another Player"** to append more rows.
 5. Click **"Submit"** to save all players at once.
 
