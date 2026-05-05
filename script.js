@@ -1,27 +1,27 @@
 // frontend logic - handles form interactions, api calls, table rendering, and search
-const playerForm    = document.getElementById("playerForm");
-const inputName     = document.getElementById("inputName");
-const inputSport    = document.getElementById("inputSport");
-const inputTeam     = document.getElementById("inputTeam");
-const inputGender   = document.getElementById("inputGender");
-const inputAge      = document.getElementById("inputAge");
-const inputWeight   = document.getElementById("inputWeight");
-const editingId     = document.getElementById("editingId");
+const playerForm = document.getElementById("playerForm");
+const inputName = document.getElementById("inputName");
+const inputSport = document.getElementById("inputSport");
+const inputTeam = document.getElementById("inputTeam");
+const inputGender = document.getElementById("inputGender");
+const inputAge = document.getElementById("inputAge");
+const inputWeight = document.getElementById("inputWeight");
+const editingId = document.getElementById("editingId");
 
-const formTitle     = document.getElementById("formTitle");
-const btnSubmit     = document.getElementById("btnSubmit");
+const formTitle = document.getElementById("formTitle");
+const btnSubmit = document.getElementById("btnSubmit");
 const btnCancelEdit = document.getElementById("btnCancelEdit");
-const btnRefresh    = document.getElementById("btnRefresh");
+const btnRefresh = document.getElementById("btnRefresh");
 
-const tableBody     = document.getElementById("playerTableBody");
-const searchInput   = document.getElementById("searchInput");
-const emptyState    = document.getElementById("emptyState");
-const dbStatus      = document.getElementById("dbStatus");
-const toast         = document.getElementById("toast");
+const tableBody = document.getElementById("playerTableBody");
+const searchInput = document.getElementById("searchInput");
+const emptyState = document.getElementById("emptyState");
+const dbStatus = document.getElementById("dbStatus");
+const toast = document.getElementById("toast");
 
-const statTotal     = document.getElementById("statTotal");
-const statSports    = document.getElementById("statSports");
-const statAvgAge    = document.getElementById("statAvgAge");
+const statTotal = document.getElementById("statTotal");
+const statSports = document.getElementById("statSports");
+const statAvgAge = document.getElementById("statAvgAge");
 const statAvgWeight = document.getElementById("statAvgWeight");
 
 let allPlayers = [];
@@ -62,12 +62,6 @@ async function deletePlayer(id) {
   return result;
 }
 
-function escapeHTML(str) {
-  const div = document.createElement("div");
-  div.appendChild(document.createTextNode(String(str)));
-  return div.innerHTML;
-}
-
 function renderTable(players) {
   if (players.length === 0) {
     emptyState.hidden = false;
@@ -79,18 +73,13 @@ function renderTable(players) {
 
   tableBody.innerHTML = players
     .map((player, i) => {
-      const name   = escapeHTML(player.name);
-      const team   = escapeHTML(player.team || "---");
-      const sport  = escapeHTML(player.sport);
-      const gender = escapeHTML(player.gender || "---");
-
       return `
         <tr data-id="${player._id}">
           <td>${i + 1}</td>
-          <td><strong>${name}</strong></td>
-          <td><span class="sport-badge ${sport.replace(/\s+/g, '-')}">${sport}</span></td>
-          <td>${team}</td>
-          <td>${gender}</td>
+          <td><strong>${player.name}</strong></td>
+          <td><span class="sport-badge ${player.sport.replace(/\s+/g, '-')}">${player.sport}</span></td>
+          <td>${player.team || "---"}</td>
+          <td>${player.gender || "---"}</td>
           <td>${player.age || "---"}</td>
           <td>${player.weight ? player.weight + " kg" : "---"}</td>
           <td class="actions-cell">
@@ -117,9 +106,9 @@ function updateStats() {
     ? (withWeight.reduce((sum, p) => sum + p.weight, 0) / withWeight.length).toFixed(1) + " kg"
     : "---";
 
-  statTotal.textContent     = total;
-  statSports.textContent    = sports || "---";
-  statAvgAge.textContent    = avgAge;
+  statTotal.textContent = total;
+  statSports.textContent = sports || "---";
+  statAvgAge.textContent = avgAge;
   statAvgWeight.textContent = avgWeight;
 }
 
@@ -144,11 +133,11 @@ playerForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const data = {
-    name:   inputName.value.trim(),
-    sport:  inputSport.value,
-    team:   inputTeam.value.trim(),
+    name: inputName.value.trim(),
+    sport: inputSport.value,
+    team: inputTeam.value.trim(),
     gender: inputGender.value,
-    age:    inputAge.value,
+    age: inputAge.value,
     weight: inputWeight.value,
   };
 
@@ -183,7 +172,7 @@ tableBody.addEventListener("click", async (e) => {
   const button = e.target.closest("[data-action]");
   if (!button) return;
 
-  const action   = button.dataset.action;
+  const action = button.dataset.action;
   const playerId = button.dataset.id;
 
   if (action === "edit") {
@@ -197,17 +186,17 @@ function handleEdit(playerId) {
   const player = allPlayers.find((p) => p._id === playerId);
   if (!player) return;
 
-  inputName.value   = player.name;
-  inputSport.value  = player.sport;
-  inputTeam.value   = player.team || "";
+  inputName.value = player.name;
+  inputSport.value = player.sport;
+  inputTeam.value = player.team || "";
   inputGender.value = player.gender || "";
-  inputAge.value    = player.age || "";
+  inputAge.value = player.age || "";
   inputWeight.value = player.weight || "";
-  editingId.value   = player._id;
+  editingId.value = player._id;
 
-  formTitle.textContent  = "Edit Player";
-  btnSubmit.textContent  = "Save Changes";
-  btnCancelEdit.hidden   = false;
+  formTitle.textContent = "Edit Player";
+  btnSubmit.textContent = "Save Changes";
+  btnCancelEdit.hidden = false;
 
   document.querySelectorAll(".editing-row").forEach((r) => r.classList.remove("editing-row"));
   document.querySelector(`tr[data-id="${playerId}"]`)?.classList.add("editing-row");
@@ -238,10 +227,10 @@ btnCancelEdit.addEventListener("click", resetForm);
 
 function resetForm() {
   playerForm.reset();
-  editingId.value        = "";
-  formTitle.textContent  = "Add Player";
-  btnSubmit.textContent  = "+ Add Player";
-  btnCancelEdit.hidden   = true;
+  editingId.value = "";
+  formTitle.textContent = "Add Player";
+  btnSubmit.textContent = "+ Add Player";
+  btnCancelEdit.hidden = true;
   document.querySelectorAll(".editing-row").forEach((r) => r.classList.remove("editing-row"));
 }
 
@@ -270,7 +259,7 @@ btnRefresh.addEventListener("click", () => {
 
 function showToast(message, type) {
   toast.textContent = message;
-  toast.className   = "toast " + type + " show";
+  toast.className = "toast " + type + " show";
 
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => {

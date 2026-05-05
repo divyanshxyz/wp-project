@@ -9,10 +9,11 @@ This document explains how each file in the project works and why certain decisi
 2. [.env - Configuration](#2-env---configuration)
 3. [db.js - Database Connection](#3-dbjs---database-connection)
 4. [server.js - Entry Point](#4-serverjs---entry-point)
-5. [routes/players.js - API Routes](#5-routesplayersjs---api-routes)
-6. [index.html - Page Structure](#6-indexhtml---page-structure)
-7. [style.css - Styling](#7-stylecss---styling)
-8. [script.js - Frontend Logic](#8-scriptjs---frontend-logic)
+5. [models/Player.js - Mongoose Model](#5-modelsplayerjs---mongoose-model)
+6. [routes/players.js - API Routes](#6-routesplayersjs---api-routes)
+7. [index.html - Page Structure](#7-indexhtml---page-structure)
+8. [style.css - Styling](#8-stylecss---styling)
+9. [script.js - Frontend Logic](#9-scriptjs---frontend-logic)
 
 ---
 
@@ -21,8 +22,10 @@ This document explains how each file in the project works and why certain decisi
 ```
 WP Project/
   .env                  # environment variables (MongoDB URL, port)
-  db.js                 # database connection module
+  db.js                 # Mongoose connection module
   server.js             # main entry point
+  models/
+    Player.js           # Mongoose schema and model
   routes/
     players.js          # API route handlers
   index.html            # page layout
@@ -31,7 +34,7 @@ WP Project/
   package.json          # dependencies
 ```
 
-The project is split into multiple files so that each file has one clear responsibility. The database logic is in `db.js`, the API routes are in `routes/players.js`, and `server.js` ties everything together. The frontend files (`index.html`, `style.css`, `script.js`) are served as static files by Express.
+The project is split into multiple files so that each file has one clear responsibility. The database connection is in `db.js`, the data schema is in `models/Player.js`, the API routes are in `routes/players.js`, and `server.js` ties everything together. The frontend files (`index.html`, `style.css`, `script.js`) are served as static files by Express.
 
 ---
 
@@ -50,29 +53,21 @@ The MongoDB connection string and other settings are stored in a `.env` file ins
 ## 3. `db.js` - Database Connection
 
 ```js
-const { MongoClient } = require("mongodb");
-
-let db;
+const mongoose = require("mongoose");
 
 async function connectDB(uri, dbName) {
-  const client = await MongoClient.connect(uri);
-  db = client.db(dbName);
+  await mongoose.connect(`${uri}/${dbName}`);
   console.log("Connected to MongoDB:", dbName);
-  return db;
 }
 
-function getDB() {
-  return db;
-}
-
-module.exports = { connectDB, getDB };
+module.exports = { connectDB };
 ```
 
-This file handles the MongoDB connection. `MongoClient.connect()` is an asynchronous operation, so we use `async/await` to wait for the connection to be established before doing anything else.
+This file handles the MongoDB connection using Mongoose. `mongoose.connect()` is an asynchronous operation, so we use `async/await` to wait for the connection to be established before doing anything else.
 
-The `db` variable is declared at module scope so it can be shared. `connectDB` is called once when the server starts, and after that any file can call `getDB()` to access the database instance without reconnecting.
+Unlike the raw `mongodb` driver, Mongoose manages its own connection pool internally. Once `mongoose.connect()` is called, all Mongoose models automatically use that connection. There is no need for a `getDB()` function — models access the database directly through Mongoose's internal state.
 
-We export both functions using `module.exports` so other files can import them with `require()`.
+The connection URI is constructed by combining `MONGO_URI` and `DB_NAME` from the `.env` file (e.g., `mongodb://127.0.0.1:27017/playerdb`).
 
 ---
 
@@ -124,41 +119,105 @@ This is an IIFE (Immediately Invoked Function Expression). It connects to MongoD
 
 ---
 
-## 5. `routes/players.js` - API Routes
+## 5. `models/Player.js` - Mongoose Model
 
-This file defines four routes using Express Router:
-
-**GET /** - Returns all players from the database.
 ```js
-const players = await getDB().collection(COLLECTION).find({}).toArray();
-res.json(players);
+const mongoose = require("mongoose");
+
+const NAME_REGEX = /^[A-Za-z\s]{1,50}$/;
+
+const playerSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, "Name is required."],
+      trim: true,
+      maxlength: [50, "Name must not exceed 50 characters."],
+      validate: {
+        validator: (v) => NAME_REGEX.test(v),
+        message: "Full Name must be 1-50 characters and contain only letters and spaces.",
+      },
+    },
+    sport: { type: String, required: [true, "Sport Type is required."], trim: true },
+    team: {
+      type: String,
+      trim: true,
+      default: "Free Agent",
+      maxlength: [50, "Team Name must not exceed 50 characters."],
+      validate: {
+        validator: (v) => !v || NAME_REGEX.test(v),
+        message: "Team Name must be 1-50 characters and contain only letters and spaces.",
+      },
+    },
+    gender: { type: String, trim: true, default: "" },
+    age: { type: Number, default: 0, min: [0, "Age cannot be negative."], max: [100, "Age cannot exceed 100."] },
+    weight: { type: Number, default: 0, min: [0, "Weight cannot be negative."], max: [200, "Weight cannot exceed 200 kg."] },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("Player", playerSchema);
 ```
-`find({})` with an empty filter returns all documents. `toArray()` converts the MongoDB cursor into a JavaScript array.
 
-**POST /** - Creates a new player.
-```js
-const { name, sport, team, gender, age, weight } = req.body;
-```
-Destructuring extracts the fields from the request body. The server validates that `name` and `sport` are present and returns a 400 error if they are missing.
+This file defines the Mongoose schema and model for player documents. A schema specifies the shape of documents in a collection — their fields, types, defaults, and validation rules.
 
-`Number(age)` converts the string value from the request body into a number so MongoDB stores it correctly.
+**Schema-level validation** replaces the manual validation that was previously done in the route handlers. Each field can have:
+- `required` — makes the field mandatory, with a custom error message
+- `trim` — automatically removes leading/trailing whitespace
+- `maxlength` — enforces a maximum string length
+- `validate` — runs a custom validator function (here, the regex check)
+- `min` / `max` — enforces numeric range limits
+- `default` — provides a fallback value if the field is not supplied
 
-`insertOne()` adds the document and returns the generated `_id`. We respond with status 201 (Created).
+The `{ timestamps: true }` option tells Mongoose to automatically add `createdAt` and `updatedAt` fields to every document. These are maintained automatically — `createdAt` is set once on insert, and `updatedAt` is refreshed on every update.
 
-**PUT /:id** - Updates an existing player.
-```js
-const filter = { _id: new ObjectId(req.params.id) };
-const update = { $set: { name, sport, team, gender, age: Number(age), weight: Number(weight) } };
-```
-`new ObjectId(id)` converts the string ID from the URL into a MongoDB ObjectId. The `$set` operator updates only the specified fields without replacing the entire document. If no document matches the filter, we return 404.
-
-**DELETE /:id** - Deletes a player by ID. Returns 404 if the player is not found.
-
-All routes are wrapped in try/catch blocks. If something goes wrong with the database operation, we catch the error and return a 500 status code with the error message.
+`mongoose.model("Player", playerSchema)` creates a model named `Player`. Mongoose automatically maps this to a MongoDB collection called `players` (lowercase, pluralized). The model provides methods like `.find()`, `.save()`, `.findByIdAndUpdate()`, and `.findByIdAndDelete()` that the route handlers use.
 
 ---
 
-## 6. `index.html` - Page Structure
+## 6. `routes/players.js` - API Routes
+
+This file defines four routes using Express Router. It imports the `Player` model instead of accessing the database directly.
+
+```js
+const Player = require("../models/Player");
+```
+
+**GET /** - Returns all players from the database.
+```js
+const players = await Player.find({});
+res.json(players);
+```
+`Player.find({})` returns all documents in the `players` collection as an array of Mongoose documents.
+
+**POST /** - Creates a new player.
+```js
+const player = new Player(req.body);
+const saved = await player.save();
+res.status(201).json(saved);
+```
+`new Player(req.body)` creates a Mongoose document from the request body. `player.save()` validates the data against the schema and inserts it into MongoDB. If validation fails, Mongoose throws a `ValidationError` which is caught and returned as a 400 response.
+
+**PUT /:id** - Updates an existing player.
+```js
+const updated = await Player.findByIdAndUpdate(req.params.id, req.body, {
+  new: true,
+  runValidators: true,
+});
+```
+`findByIdAndUpdate` finds a document by its `_id` and applies the updates. The `new: true` option returns the updated document instead of the original. `runValidators: true` is important — without it, Mongoose skips schema validation on updates. If no document matches the ID, `null` is returned and we respond with 404.
+
+**DELETE /:id** - Deletes a player by ID.
+```js
+const deleted = await Player.findByIdAndDelete(req.params.id);
+```
+`findByIdAndDelete` finds and removes the document in one operation. Returns `null` if no document matches, triggering a 404 response.
+
+**Error handling:** All routes catch `ValidationError` separately from other errors. Validation errors return 400 with the specific field error messages joined together. Other errors return 500.
+
+---
+
+## 7. `index.html` - Page Structure
 
 The HTML file contains:
 - A header with the app title and a database connection status indicator
@@ -188,20 +247,22 @@ Instead of using inline `onclick` handlers, we use `data-*` attributes. `script.
 
 ---
 
-## 7. `style.css` - Styling
+## 8. `style.css` - Styling
 
-The CSS uses a simple light theme with a dark header. Key points:
+The CSS uses a dark industrial theme with electric amber accents, defined through CSS custom properties in `:root`. Key points:
 
 - The reset (`* { margin: 0; padding: 0; box-sizing: border-box; }`) removes default browser spacing so elements are sized consistently.
+- CSS custom properties (variables) centralise all colors, radii, fonts, and transitions in `:root` for easy retheming.
 - The layout uses CSS Grid. The stats bar is a 4-column grid. The main content area is a 2-column grid (form on the left, table on the right).
 - On screens smaller than 900px, the grid switches to a single column using a media query.
 - The table uses `overflow-x: auto` on its wrapper so it scrolls horizontally on small screens instead of breaking the layout.
+- Sport badges have per-sport color coding using class-based selectors.
 - Toast notifications use `max-height` and `opacity` to show and hide. When the `show` class is added by JavaScript, the toast becomes visible.
-- Buttons and inputs have simple hover and focus styles using direct color values (no CSS variables).
+- Buttons and inputs use CSS variables for consistent hover and focus styles.
 
 ---
 
-## 8. `script.js` - Frontend Logic
+## 9. `script.js` - Frontend Logic
 
 ### DOM References
 
@@ -233,15 +294,7 @@ tableBody.innerHTML = players.map((player, i) => `<tr>...</tr>`).join("");
 ```
 `Array.map()` transforms each player object into an HTML string. `.join("")` combines all the strings into one. Setting `innerHTML` once is faster than creating and appending DOM elements in a loop.
 
-**XSS Protection:**
-```js
-function escapeHTML(str) {
-  const div = document.createElement("div");
-  div.appendChild(document.createTextNode(String(str)));
-  return div.innerHTML;
-}
-```
-Before inserting user-provided text into HTML, we escape it. If someone entered `<script>alert('xss')</script>` as a player name, this function converts the angle brackets to safe HTML entities so the script does not execute.
+**Note on XSS:** A client-side `escapeHTML()` function is no longer needed. The Mongoose schema validation (`/^[A-Za-z\s]{1,50}$/`) on `name` and `team` fields ensures that only letters and spaces can be stored in the database. The `sport` and `gender` fields come from fixed `<select>` dropdowns and are not user-typeable. Since no special characters can reach the database, there is no XSS risk when rendering player data in the table.
 
 ### Form Submit Handler
 
