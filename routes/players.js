@@ -61,4 +61,33 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.post("/bulk", async (req, res) => {
+  try {
+    const { players } = req.body;
+
+    if (!Array.isArray(players) || players.length === 0) {
+      return res.status(400).json({ error: "Players array is required." });
+    }
+
+    const docs = players.map((p) => new Player(p));
+
+    for (let i = 0; i < docs.length; i++) {
+      const err = docs[i].validateSync();
+      if (err) {
+        const message = Object.values(err.errors).map((e) => e.message).join(" ");
+        return res.status(400).json({ error: `Player ${i + 1}: ${message}` });
+      }
+    }
+
+    const saved = await Player.insertMany(docs);
+    res.status(201).json(saved);
+  } catch (err) {
+    if (err.name === "ValidationError") {
+      const message = Object.values(err.errors).map((e) => e.message).join(" ");
+      return res.status(400).json({ error: message });
+    }
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

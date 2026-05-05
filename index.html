@@ -13,107 +13,73 @@
 </head>
 
 <body>
-  <header class="site-header">
-    <div class="header-inner">
-      <div class="logo">
-        <span class="logo-icon"></span>
-        <div>
-          <span class="logo-title">LNMIIT</span>
-          <span class="logo-sub">PLAYER MANAGEMENT</span>
-        </div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <!-- <span class="sidebar-logo-icon">&#9917;</span> -->
+      <div>
+        <span class="sidebar-logo-title">LNMIIT</span>
+        <span class="sidebar-logo-sub">PLAYER MANAGEMENT</span>
       </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-page="roster" id="navRoster">
+        <span class="nav-icon">&#9776;</span>
+        <span class="nav-label">Player Roster</span>
+      </button>
+      <button class="nav-item" data-page="add" id="navAdd">
+        <span class="nav-icon">&#43;</span>
+        <span class="nav-label">Add Player</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-actions">
+      <button class="nav-item" id="btnExportCsv">
+        <span class="nav-icon">&#8615;</span>
+        <span class="nav-label">Export to CSV</span>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
       <div class="db-status" id="dbStatus">
         <span class="status-dot"></span>
         <span class="status-text">Connecting...</span>
       </div>
     </div>
-  </header>
+  </aside>
 
-  <main class="main-container">
-    <section class="stats-bar" id="statsBar">
-      <div class="stat-card">
-        <span class="stat-value" id="statTotal">0</span>
-        <span class="stat-label">Total Players</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value" id="statSports">---</span>
-        <span class="stat-label">Sports</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value" id="statAvgAge">---</span>
-        <span class="stat-label">Avg. Age</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value" id="statAvgWeight">---</span>
-        <span class="stat-label">Avg. Weight</span>
-      </div>
-    </section>
+  <div class="app-content">
+    <div class="mobile-topbar" id="mobileTopbar">
+      <button class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar">&#9776;</button>
+      <span class="mobile-topbar-title">LNMIIT</span>
+    </div>
 
-    <div class="content-grid">
-      <div class="form-panel">
-        <div class="panel-header">
-          <h2 class="panel-title" id="formTitle">Add Player</h2>
-          <button class="btn-cancel" id="btnCancelEdit" hidden>Cancel</button>
+    <!-- PAGE: ROSTER -->
+    <main class="main-container page-content active" id="pageRoster">
+      <section class="stats-bar" id="statsBar">
+        <div class="stat-card">
+          <span class="stat-value" id="statTotal">0</span>
+          <span class="stat-label">Total Players</span>
         </div>
-
-        <form id="playerForm" novalidate>
-          <input type="hidden" id="editingId" value="" />
-
-          <div class="form-group">
-            <label for="inputName">Full Name *</label>
-            <input type="text" id="inputName" placeholder="e.g. Virat Kohli" required />
-          </div>
-
-          <div class="form-group">
-            <label for="inputSport">Sport Type *</label>
-            <select id="inputSport" required>
-              <option value="">-- Select sport --</option>
-              <option value="Cricket">Cricket</option>
-              <option value="Football">Football</option>
-              <option value="Basketball">Basketball</option>
-              <option value="Tennis">Tennis</option>
-              <option value="Badminton">Badminton</option>
-              <option value="Hockey">Hockey</option>
-              <option value="Volleyball">Volleyball</option>
-              <option value="Athletics">Athletics</option>
-              <option value="Swimming">Swimming</option>
-              <option value="Table Tennis">Table Tennis</option>
-              <option value="Kabaddi">Kabaddi</option>
-              <option value="Other">Other</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="inputTeam">Team Name</label>
-            <input type="text" id="inputTeam" placeholder="e.g. Royal Challengers Banglore" />
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="inputGender">Gender</label>
-              <select id="inputGender">
-                <option value="">-- Select --</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="inputAge">Age</label>
-              <input type="number" id="inputAge" placeholder="25" min="15" max="100" />
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="inputWeight">Weight (kg)</label>
-            <input type="number" id="inputWeight" placeholder="70" min="30" max="200" step="0.1" />
-          </div>
-
-          <button type="submit" class="btn-primary" id="btnSubmit">+ Add Player</button>
-        </form>
-
-        <div class="toast" id="toast" aria-live="polite"></div>
-      </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statSports">---</span>
+          <span class="stat-label">Sports</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statTeams">---</span>
+          <span class="stat-label">Teams</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statAvgAge">---</span>
+          <span class="stat-label">Avg. Age</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="statAvgWeight">---</span>
+          <span class="stat-label">Avg. Weight</span>
+        </div>
+      </section>
 
       <section class="table-panel">
         <div class="panel-header">
@@ -147,8 +113,89 @@
           </table>
         </div>
       </section>
-    </div>
-  </main>
+    </main>
+
+    <!-- PAGE: ADD PLAYER -->
+    <main class="main-container page-content page-add" id="pageAdd">
+      <div class="form-panel form-panel-full">
+        <div class="panel-header">
+          <h2 class="panel-title" id="formTitle">Add Players</h2>
+          <button class="btn-cancel" id="btnCancelEdit" hidden>Cancel</button>
+        </div>
+
+        <form id="playerForm" novalidate>
+          <input type="hidden" id="editingId" value="" />
+
+          <div class="form-section-label">Shared Details</div>
+
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label for="inputSport">Sport Type *</label>
+              <select id="inputSport" required>
+                <option value="">-- Select sport --</option>
+                <option value="Cricket">Cricket</option>
+                <option value="Football">Football</option>
+                <option value="Basketball">Basketball</option>
+                <option value="Tennis">Tennis</option>
+                <option value="Badminton">Badminton</option>
+                <option value="Hockey">Hockey</option>
+                <option value="Volleyball">Volleyball</option>
+                <option value="Athletics">Athletics</option>
+                <option value="Swimming">Swimming</option>
+                <option value="Table Tennis">Table Tennis</option>
+                <option value="Kabaddi">Kabaddi</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="inputTeam">Team Name *</label>
+              <input type="text" id="inputTeam" placeholder="e.g. Royal Challengers Bangalore" required />
+            </div>
+            <div class="form-group">
+              <label for="inputGender">Gender *</label>
+              <select id="inputGender" required>
+                <option value="">-- Select --</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-section-label">Player Details</div>
+
+          <div class="player-rows" id="playerRows">
+            <div class="player-row" data-index="0">
+              <div class="player-row-header">
+                <span class="player-row-number">Player 1</span>
+              </div>
+              <div class="form-row form-row-3">
+                <div class="form-group">
+                  <label>Full Name *</label>
+                  <input type="text" class="row-name" placeholder="e.g. Virat Kohli" required />
+                </div>
+                <div class="form-group">
+                  <label>Age *</label>
+                  <input type="number" class="row-age" placeholder="25" min="15" max="100" required />
+                </div>
+                <div class="form-group">
+                  <label>Weight (kg) *</label>
+                  <input type="number" class="row-weight" placeholder="70" min="30" max="200" step="0.1" required />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn-add-row" id="btnAddRow">+ Add Another Player</button>
+            <button type="submit" class="btn-primary" id="btnSubmit">Submit</button>
+          </div>
+        </form>
+
+        <div class="toast" id="toast" aria-live="polite"></div>
+      </div>
+    </main>
+  </div>
 
   <script src="script.js"></script>
 </body>
